@@ -25,6 +25,9 @@
     h2 { margin: 0 0 16px; font-size: 1.4rem; line-height: 1.35; }
     h3 { margin: 24px 0 12px; line-height: 1.4; }
     header p { margin: 4px 0; }
+    .header-links { margin-top: 16px; font-size: 0.95rem; overflow-wrap: anywhere; }
+    nav { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 16px; margin-bottom: 32px; }
+    a { color: #245a91; }
     section { margin: 36px 0; }
     p { margin: 0 0 16px; }
     figure { margin: 24px 0; text-align: center; }
@@ -45,10 +48,29 @@
       <h1>Homework 2: MeshEdit</h1>
       <p>CS 184/284A · Fall 2026</p>
       <p>MD Aeinul Islam</p>
+      <div class="header-links">
+        <p>Public write-up: <a href="https://cal-cs184-student.github.io/hw2-fox-hound-writeup/">https://cal-cs184-student.github.io/hw2-fox-hound-writeup/</a></p>
+        <p>Code repository: <a href="https://github.com/cal-cs184-student/hw2-fox-hound">https://github.com/cal-cs184-student/hw2-fox-hound</a></p>
+        <p>Write-up repository: <a href="https://github.com/cal-cs184-student/hw2-fox-hound-writeup">https://github.com/cal-cs184-student/hw2-fox-hound-writeup</a></p>
+      </div>
     </header>
+    <nav aria-label="Report sections">
+      <a href="#overview">Overview</a>
+      <a href="#part-1">Part 1</a>
+      <a href="#part-2">Part 2</a>
+      <a href="#part-3">Part 3</a>
+      <a href="#part-4">Part 4</a>
+      <a href="#part-5">Part 5</a>
+      <a href="#part-6">Part 6</a>
+      <a href="#ec1">EC1</a>
+      <a href="#ec2">EC2</a>
+      <a href="#ec3">EC3</a>
+      <a href="#reflection">Reflection</a>
+    </nav>
 
-    <section id="overview" aria-labelledby="overview-heading">
-      <h2 id="overview-heading">Overview</h2>
+
+    <section aria-labelledby="overview">
+      <h2 id="overview">Overview</h2>
       <p>This assignment focused on Bézier evaluation, halfedge mesh operations, vertex normals, and subdivision surfaces.</p>
       <p>I first implemented de Casteljau subdivision for Bézier curves and extended the same idea to Bézier surfaces. I then implemented area weighted vertex normals for smooth shading, followed by local halfedge operations for edge flipping and edge splitting.</p>
       <p>Using those mesh operations, I implemented Loop subdivision and tested how repeated subdivision changes both topology and geometry. I also explored how the initial triangulation of a cube affects the resulting limit surface.</p>
@@ -57,8 +79,8 @@
       <p>One of the most interesting things I learned was how strongly subdivision depends on mesh connectivity, not just vertex positions. Small changes to the initial triangulation can produce noticeably different limit surfaces.</p>
     </section>
 
-    <section id="part1" aria-labelledby="part1-heading">
-      <h2 id="part1-heading">Part 1: Bézier Curves with 1D de Casteljau Subdivision</h2>
+    <section aria-labelledby="part-1">
+      <h2 id="part-1">Part 1: Bézier Curves with 1D de Casteljau Subdivision</h2>
       <h3>Implementation</h3>
       <p>I implemented one step of de Casteljau subdivision in <code>BezierCurve::evaluateStep</code>. Given a set of control points and a parameter t, the function linearly interpolates each adjacent pair of points using</p>
       <p>\[p_i&#x27; = (1-t)p_i + t p_{i+1}\]</p>
@@ -107,8 +129,8 @@
       </div>
     </section>
 
-    <section id="part2" aria-labelledby="part2-heading">
-      <h2 id="part2-heading">Part 2: Bézier Surfaces with Separable 1D de Casteljau</h2>
+    <section aria-labelledby="part-2">
+      <h2 id="part-2">Part 2: Bézier Surfaces with Separable 1D de Casteljau</h2>
       <h3>Implementation</h3>
       <p>I extended the 1D de Casteljau evaluation from Part 1 to evaluate Bézier surfaces.</p>
       <p>The surface is represented by a grid of control points. I first evaluate each row of the control grid as a Bézier curve at parameter u. This produces one intermediate point from each row. I then evaluate those intermediate points as another Bézier curve at parameter v.</p>
@@ -132,8 +154,8 @@
       </div>
     </section>
 
-    <section id="part3" aria-labelledby="part3-heading">
-      <h2 id="part3-heading">Part 3: Area Weighted Vertex Normals</h2>
+    <section aria-labelledby="part-3">
+      <h2 id="part-3">Part 3: Area Weighted Vertex Normals</h2>
       <h3>Implementation</h3>
       <p>I implemented area weighted vertex normals in <code>Vertex::normal</code>.</p>
       <p>For each vertex, I iterate around its one ring neighborhood using halfedges. For every adjacent non boundary triangle, I compute the face normal using the cross product of two triangle edges. I use the unnormalized cross product so that larger triangles contribute more to the final vertex normal.</p>
@@ -168,8 +190,8 @@
       </div>
     </section>
 
-    <section id="part4" aria-labelledby="part4-heading">
-      <h2 id="part4-heading">Part 4: Edge Flip</h2>
+    <section aria-labelledby="part-4">
+      <h2 id="part-4">Part 4: Edge Flip</h2>
       <h3>Implementation</h3>
       <p>I implemented edge flipping in <code>HalfedgeMesh::flipEdge</code>.</p>
       <p>For an interior edge shared by two triangles, I first identify the six halfedges around the local neighborhood and the four vertices involved. The original diagonal is then replaced by the opposite diagonal while keeping the same vertices, edges, and faces.</p>
@@ -195,8 +217,8 @@
       </div>
     </section>
 
-    <section id="part5" aria-labelledby="part5-heading">
-      <h2 id="part5-heading">Part 5: Edge Split</h2>
+    <section aria-labelledby="part-5">
+      <h2 id="part-5">Part 5: Edge Split</h2>
       <h3>Implementation</h3>
       <p>I implemented edge splitting in <code>HalfedgeMesh::splitEdge</code>.</p>
       <p>For an interior edge shared by two triangles, the operation inserts a new vertex at the midpoint of the original edge. The two original triangles are then replaced by four triangles by connecting the new midpoint vertex to the two opposite vertices.</p>
@@ -228,8 +250,8 @@ v_{\text{new}} = \frac{v_0 + v_1}{2}
       </div>
     </section>
 
-    <section id="part6" aria-labelledby="part6-heading">
-      <h2 id="part6-heading">Part 6: Loop Subdivision for Mesh Upsampling</h2>
+    <section aria-labelledby="part-6">
+      <h2 id="part-6">Part 6: Loop Subdivision for Mesh Upsampling</h2>
       <h3>Implementation</h3>
       <p>I implemented Loop subdivision in <code>MeshResampler::upsample</code>.</p>
       <p>The algorithm is performed in several stages so that the positions computed from the original mesh are not affected by topology changes made later in the process.</p>
@@ -300,8 +322,8 @@ p_{\text{edge}}
       </div>
     </section>
 
-    <section id="ec1" aria-labelledby="ec1-heading">
-      <h2 id="ec1-heading">Extra Credit 1: Boundary Edge Splitting</h2>
+    <section aria-labelledby="ec1">
+      <h2 id="ec1">Extra Credit 1: Boundary Edge Splitting</h2>
       <h3>Implementation</h3>
       <p>I extended <code>HalfedgeMesh::splitEdge</code> to support edges on a mesh boundary.</p>
       <p>For a boundary edge, the split inserts a new vertex at the midpoint of the original edge. The single adjacent interior triangle is divided into two triangles, while the boundary loop is updated so that the original boundary segment becomes two boundary segments.</p>
@@ -330,8 +352,8 @@ p_{\text{edge}}
       </div>
     </section>
 
-    <section id="ec2" aria-labelledby="ec2-heading">
-      <h2 id="ec2-heading">Extra Credit 2: Loop Subdivision on Boundary Meshes</h2>
+    <section aria-labelledby="ec2">
+      <h2 id="ec2">Extra Credit 2: Loop Subdivision on Boundary Meshes</h2>
       <h3>Implementation</h3>
       <p>I extended Loop subdivision so that it also works correctly on meshes with open boundaries.</p>
       <p>For an original boundary vertex with neighboring boundary vertices a and b, I update its position using</p>
@@ -363,8 +385,8 @@ p_{\text{edge}} = \frac{A+B}{2}
       </div>
     </section>
 
-    <section id="ec3" aria-labelledby="ec3-heading">
-      <h2 id="ec3-heading">Extra Credit 3: sqrt(3) Subdivision</h2>
+    <section aria-labelledby="ec3">
+      <h2 id="ec3">Extra Credit 3: sqrt(3) Subdivision</h2>
       <h3>Implementation</h3>
       <p>I implemented sqrt(3) subdivision in <code>MeshResampler::upsampleSqrt3</code>.</p>
       <p>For each original triangle, I insert a new vertex at the face centroid. I then reconnect the mesh so that each original triangle is divided into three smaller triangles.</p>
@@ -405,8 +427,8 @@ p&#x27;
       </div>
     </section>
 
-    <section id="reflection" aria-labelledby="reflection-heading">
-      <h2 id="reflection-heading">Reflection</h2>
+    <section aria-labelledby="reflection">
+      <h2 id="reflection">Reflection</h2>
       <p>The most challenging part of this assignment was working with halfedge connectivity. Edge flips and edge splits are local operations, but they require every affected pointer to be updated consistently. A small mistake can leave the mesh looking reasonable while still corrupting the underlying topology.</p>
       <p>Loop subdivision made the relationship between topology and geometry especially clear. The cube experiments showed that subdivision does not depend only on vertex positions. The initial connectivity and local sampling density can significantly affect the final shape.</p>
       <p>The extra credit boundary work also made the distinction between interior and boundary rules much more concrete. Boundary meshes need different vertex update rules and different handling of edge operations in order to remain valid.</p>
