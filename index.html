@@ -49,12 +49,32 @@
 
     <section id="overview" aria-labelledby="overview-heading">
       <h2 id="overview-heading">Overview</h2>
-      <!-- REPORT CONTENT TO BE INSERTED IN LATER MILESTONE -->
+      <p>This assignment focused on Bézier evaluation, halfedge mesh operations, vertex normals, and subdivision surfaces.</p>
+      <p>I first implemented de Casteljau subdivision for Bézier curves and extended the same idea to Bézier surfaces. I then implemented area weighted vertex normals for smooth shading, followed by local halfedge operations for edge flipping and edge splitting.</p>
+      <p>Using those mesh operations, I implemented Loop subdivision and tested how repeated subdivision changes both topology and geometry. I also explored how the initial triangulation of a cube affects the resulting limit surface.</p>
+      <p>For extra credit, I extended edge splitting and Loop subdivision to support boundary meshes, and I implemented sqrt(3) subdivision for closed triangular meshes.</p>
+      <p>Throughout the assignment, I tested both the numerical behavior of the algorithms and their visual results on the provided meshes.</p>
+      <p>One of the most interesting things I learned was how strongly subdivision depends on mesh connectivity, not just vertex positions. Small changes to the initial triangulation can produce noticeably different limit surfaces.</p>
     </section>
 
     <section id="part1" aria-labelledby="part1-heading">
       <h2 id="part1-heading">Part 1: Bézier Curves with 1D de Casteljau Subdivision</h2>
-      <!-- REPORT CONTENT TO BE INSERTED IN LATER MILESTONE -->
+      <h3>Implementation</h3>
+      <p>I implemented one step of de Casteljau subdivision in <code>BezierCurve::evaluateStep</code>. Given a set of control points and a parameter t, the function linearly interpolates each adjacent pair of points using</p>
+      <p>\[p_i&#x27; = (1-t)p_i + t p_{i+1}\]</p>
+      <p>If the input contains n points, one call produces n - 1 new points. Repeating this process eventually reduces the control polygon to a single point on the Bézier curve.</p>
+      <p>For my custom example, I used six control points:</p>
+      <p>(0.100, 0.200), (0.200, 0.850), (0.350, 0.150), (0.550, 0.800), (0.750, 0.250), (0.900, 0.650)</p>
+      <p>Starting from six control points, the successive de Casteljau levels contain:</p>
+      <p>6 → 5 → 4 → 3 → 2 → 1 points.</p>
+
+      <h3>Results</h3>
+      <p>The intermediate interpolation levels show how the original control polygon is gradually reduced until only one evaluated point remains. The final point lies on the completed Bézier curve.</p>
+      <p>Changing t changes where the evaluated point lies along the curve, while changing one of the original control points changes the shape of the curve itself. The construction updates accordingly because every interpolation level depends on the positions of the previous level.</p>
+
+      <h3>Visual Verification</h3>
+      <p>I manually verified the custom six point curve in the viewer by stepping through every de Casteljau level using E. I also enabled the completed Bézier curve using C, moved one of the original control points, and changed t using the scroll control.</p>
+      <p>The expected reduction from six points to a single final point was visible at each step, and the final evaluated point remained on the completed curve.</p>
       <div class="figures">
         <figure>
           <img src="assets/p1-level0.png" alt="Original six control points">
@@ -89,7 +109,21 @@
 
     <section id="part2" aria-labelledby="part2-heading">
       <h2 id="part2-heading">Part 2: Bézier Surfaces with Separable 1D de Casteljau</h2>
-      <!-- REPORT CONTENT TO BE INSERTED IN LATER MILESTONE -->
+      <h3>Implementation</h3>
+      <p>I extended the 1D de Casteljau evaluation from Part 1 to evaluate Bézier surfaces.</p>
+      <p>The surface is represented by a grid of control points. I first evaluate each row of the control grid as a Bézier curve at parameter u. This produces one intermediate point from each row. I then evaluate those intermediate points as another Bézier curve at parameter v.</p>
+      <p>So the surface evaluation is performed in two stages: evaluate every row at u, then evaluate the resulting points at v.</p>
+      <p>The implementation uses three functions:</p>
+      <p><code>BezierPatch::evaluateStep</code> performs one interpolation level in 3D.</p>
+      <p><code>BezierPatch::evaluate1D</code> repeatedly applies de Casteljau subdivision until only one point remains.</p>
+      <p><code>BezierPatch::evaluate</code> first evaluates each row at u, then evaluates the resulting points at v.</p>
+
+      <h3>Results</h3>
+      <p>I tested the surface evaluator numerically using asymmetric control grids and several values of u and v. Using asymmetric inputs was useful because it makes an accidental swap between u and v easier to detect.</p>
+      <p>The implementation also successfully evaluated the supplied Bézier teapot model.</p>
+
+      <h3>Visual Verification</h3>
+      <p>I rotated the Bézier teapot around and checked it from a few different views. I mainly looked at the spout, handle, lid, underside, and the places where different patches meet. Everything stayed connected as I moved around the model, and I did not notice any strange gaps, spikes, or missing pieces.</p>
       <div class="figures">
         <figure>
           <img src="assets/p2-bezier-teapot.png" alt="Bézier patch evaluation of the supplied teapot model">
@@ -100,7 +134,28 @@
 
     <section id="part3" aria-labelledby="part3-heading">
       <h2 id="part3-heading">Part 3: Area Weighted Vertex Normals</h2>
-      <!-- REPORT CONTENT TO BE INSERTED IN LATER MILESTONE -->
+      <h3>Implementation</h3>
+      <p>I implemented area weighted vertex normals in <code>Vertex::normal</code>.</p>
+      <p>For each vertex, I iterate around its one ring neighborhood using halfedges. For every adjacent non boundary triangle, I compute the face normal using the cross product of two triangle edges. I use the unnormalized cross product so that larger triangles contribute more to the final vertex normal.</p>
+      <p>I then sum the neighboring face normals and normalize the result.</p>
+      <p>\[
+\mathbf{n}_v =
+\frac{
+\sum_{f \in N(v)} \mathbf{n}_f
+}{
+\left\|
+\sum_{f \in N(v)} \mathbf{n}_f
+\right\|
+}
+\]</p>
+      <p>Boundary faces are skipped when accumulating the normal.</p>
+
+      <h3>Results</h3>
+      <p>I compared the supplied teapot using flat shading and smooth shading.</p>
+      <p>With flat shading, the individual triangle faces are clearly visible. With smooth shading enabled, the surface looks much smoother because the vertex normals are interpolated across neighboring triangles.</p>
+
+      <h3>Visual Verification</h3>
+      <p>In the flat shaded rendering, the individual triangle faces are clearly visible, especially across the body, lid, spout, and handle of the teapot. In the smooth shaded rendering, these faceted transitions are greatly reduced, and the surface appears much smoother and more continuous. This matches the expected effect of area weighted vertex normals.</p>
       <div class="figures">
         <figure>
           <img src="assets/p3-teapot-flat.png" alt="Teapot rendered with flat shading">
@@ -115,7 +170,19 @@
 
     <section id="part4" aria-labelledby="part4-heading">
       <h2 id="part4-heading">Part 4: Edge Flip</h2>
-      <!-- REPORT CONTENT TO BE INSERTED IN LATER MILESTONE -->
+      <h3>Implementation</h3>
+      <p>I implemented edge flipping in <code>HalfedgeMesh::flipEdge</code>.</p>
+      <p>For an interior edge shared by two triangles, I first identify the six halfedges around the local neighborhood and the four vertices involved. The original diagonal is then replaced by the opposite diagonal while keeping the same vertices, edges, and faces.</p>
+      <p>The operation only rewires the local halfedge connectivity. No new mesh elements are created or deleted. I update the next, twin, vertex, edge, and face relationships for the affected halfedges, and I also update the representative halfedge pointers stored by the affected vertices, edges, and faces.</p>
+      <p>Boundary edges are rejected and left unchanged.</p>
+
+      <h3>Debugging and Verification</h3>
+      <p>The main challenge was making sure every pointer in the local neighborhood was updated consistently. A single incorrect next, vertex, or face assignment can leave the mesh looking almost correct while still corrupting the halfedge structure.</p>
+      <p>To make this easier to debug, I treated the flip as a strictly local operation and explicitly tracked the six halfedges surrounding the two triangles before performing any rewiring. I also tested repeated flips and checked that the mesh connectivity remained valid after each operation.</p>
+      <p>The implementation was tested on many interior edges, including repeated flips on the teapot mesh, without changing the number of vertices, edges, faces, or halfedges.</p>
+
+      <h3>Visual Verification</h3>
+      <p>I flipped several interior edges on the teapot and compared the mesh before and after. The teapot itself kept the same overall shape, but I could see the triangle layout change where I performed the flips. I also checked the edited area for anything obviously broken, and I did not see any holes, detached faces, or other visible problems.</p>
       <div class="figures">
         <figure>
           <img src="assets/p45-teapot-before.png" alt="Teapot mesh before performing edge flips">
@@ -130,7 +197,21 @@
 
     <section id="part5" aria-labelledby="part5-heading">
       <h2 id="part5-heading">Part 5: Edge Split</h2>
-      <!-- REPORT CONTENT TO BE INSERTED IN LATER MILESTONE -->
+      <h3>Implementation</h3>
+      <p>I implemented edge splitting in <code>HalfedgeMesh::splitEdge</code>.</p>
+      <p>For an interior edge shared by two triangles, the operation inserts a new vertex at the midpoint of the original edge. The two original triangles are then replaced by four triangles by connecting the new midpoint vertex to the two opposite vertices.</p>
+      <p>The implementation updates the local halfedge connectivity and creates the additional mesh elements needed for the split. For an interior edge split, the mesh gains one vertex, three edges, two faces, and six halfedges.</p>
+      <p>\[
+v_{\text{new}} = \frac{v_0 + v_1}{2}
+\]</p>
+      <p>I also preserve the edge metadata needed later for Loop subdivision. The two halves of the original edge remain marked as old edges, while the newly created edges connecting the midpoint to the opposite vertices are marked as new edges.</p>
+
+      <h3>Debugging and Verification</h3>
+      <p>The main challenge was rewiring all of the local halfedges consistently while also preserving valid representative halfedge pointers for the affected vertices, edges, and faces.</p>
+      <p>I verified the implementation by checking the expected element count changes after each split and by repeatedly splitting interior edges on several meshes. The resulting meshes remained connected and valid after repeated operations.</p>
+
+      <h3>Visual Verification</h3>
+      <p>I tested edge splitting on several interior edges of the teapot. After the splits, new vertices and smaller triangles were clearly visible in the edited region while the overall shape of the teapot remained unchanged. I then performed several edge flips on the subdivided region and confirmed that the local triangulation changed without introducing visible holes, disconnected faces, or other mesh corruption.</p>
       <div class="figures">
         <figure>
           <img src="assets/p45-teapot-before.png" alt="Teapot mesh before performing edge splits">
@@ -149,7 +230,40 @@
 
     <section id="part6" aria-labelledby="part6-heading">
       <h2 id="part6-heading">Part 6: Loop Subdivision for Mesh Upsampling</h2>
-      <!-- REPORT CONTENT TO BE INSERTED IN LATER MILESTONE -->
+      <h3>Implementation</h3>
+      <p>I implemented Loop subdivision in <code>MeshResampler::upsample</code>.</p>
+      <p>The algorithm is performed in several stages so that the positions computed from the original mesh are not affected by topology changes made later in the process.</p>
+      <p>First, I compute the new positions of all original vertices. For an interior vertex of degree n, I use the Loop subdivision weight</p>
+      <p>\[
+\beta =
+\begin{cases}
+\frac{3}{16}, &amp; n = 3 \\
+\frac{3}{8n}, &amp; \text{otherwise}
+\end{cases}
+\]</p>
+      <p>and compute</p>
+      <p>\[
+p&#x27; = (1 - n\beta)p + \beta \sum_{i=1}^{n} p_i
+\]</p>
+      <p>where p is the original vertex position and the p_i values are the positions of its neighboring vertices.</p>
+      <p>For every original interior edge with endpoints A and B, and opposite vertices C and D, I compute the position of the new edge vertex as</p>
+      <p>\[
+p_{\text{edge}}
+=
+\frac{3}{8}(A+B)
++
+\frac{1}{8}(C+D)
+\]</p>
+      <p>After computing all new positions, I split every original edge exactly once. I then flip each newly created edge that connects one original vertex and one new vertex. Finally, I update all vertex positions using the values calculated before modifying the topology.</p>
+      <p>This ordering keeps the geometric calculations based on the original mesh while allowing the split and flip operations from the previous parts to be reused.</p>
+
+      <h3>Results</h3>
+      <p>Repeated Loop subdivision increases the number of triangles while smoothing the mesh. Sharp corners and edges gradually become rounded, and the mesh approaches a smoother limit surface.</p>
+      <p>I also compared subdivision on the original cube with subdivision after preprocessing the cube. Because the original cube triangulation is asymmetric, repeated subdivision can produce visible asymmetry. Splitting the face diagonals before subdivision gives the cube a more symmetric initial connectivity and produces a more symmetric result.</p>
+      <p>I also experimented with additional edge splits along one physical cube edge before subdivision. This increased the local sampling density and noticeably changed the resulting surface after repeated subdivision, showing that Loop subdivision is sensitive to local mesh connectivity and sampling density.</p>
+
+      <h3>Visual Verification</h3>
+      <p>I compared the original cube, a cube with all face diagonals preprocessed, and a cube with additional sampling along one physical edge. The untreated cube became progressively smoother after each Loop subdivision step, but its asymmetric triangulation produced a noticeably asymmetric rounded shape. After preprocessing all six face diagonals, the subdivided result appeared much more symmetric. The additional edge sampling experiment produced a clear local deformation after repeated subdivision, showing that the Loop limit surface is sensitive to mesh connectivity and local sampling density.</p>
       <div class="figures">
         <figure>
           <img src="assets/p6-cube-raw-round0.png" alt="Original cube before Loop subdivision">
@@ -188,7 +302,18 @@
 
     <section id="ec1" aria-labelledby="ec1-heading">
       <h2 id="ec1-heading">Extra Credit 1: Boundary Edge Splitting</h2>
-      <!-- REPORT CONTENT TO BE INSERTED IN LATER MILESTONE -->
+      <h3>Implementation</h3>
+      <p>I extended <code>HalfedgeMesh::splitEdge</code> to support edges on a mesh boundary.</p>
+      <p>For a boundary edge, the split inserts a new vertex at the midpoint of the original edge. The single adjacent interior triangle is divided into two triangles, while the boundary loop is updated so that the original boundary segment becomes two boundary segments.</p>
+      <p>The operation preserves the existing virtual boundary face and updates the local halfedge connectivity without creating an additional boundary face.</p>
+      <p>For one boundary edge split, the mesh gains one vertex, two edges, one interior face, and four halfedges.</p>
+      <p>The new vertex is placed at the midpoint of the original boundary edge.</p>
+
+      <h3>Verification</h3>
+      <p>I tested the boundary split operation repeatedly on open meshes and verified that the boundary loop remained connected after each operation. Repeated boundary splits did not introduce holes, disconnected components, or invalid local connectivity.</p>
+
+      <h3>Visual Verification</h3>
+      <p>I tested boundary edge splitting along the wheel arch of the open beetle mesh. A single split inserted a new vertex along the boundary while keeping the rim connected. I then performed several additional boundary splits in the same region. The boundary remained continuous, and I did not observe any holes, disconnected faces, or other visible mesh corruption after the repeated operations.</p>
       <div class="figures">
         <figure>
           <img src="assets/ec1-boundary-before.png" alt="Open mesh before splitting a boundary edge">
@@ -207,7 +332,25 @@
 
     <section id="ec2" aria-labelledby="ec2-heading">
       <h2 id="ec2-heading">Extra Credit 2: Loop Subdivision on Boundary Meshes</h2>
-      <!-- REPORT CONTENT TO BE INSERTED IN LATER MILESTONE -->
+      <h3>Implementation</h3>
+      <p>I extended Loop subdivision so that it also works correctly on meshes with open boundaries.</p>
+      <p>For an original boundary vertex with neighboring boundary vertices a and b, I update its position using</p>
+      <p>\[
+p&#x27; = \frac{3}{4}p + \frac{1}{8}(a+b)
+\]</p>
+      <p>For a boundary edge with endpoints A and B, the new edge vertex is placed at the midpoint:</p>
+      <p>\[
+p_{\text{edge}} = \frac{A+B}{2}
+\]</p>
+      <p>Boundary edges are preserved during the subdivision process and are not flipped. Interior edges continue to use the standard Loop subdivision rules.</p>
+      <p>This allows open meshes to be refined while keeping their boundary loops connected.</p>
+
+      <h3>Verification</h3>
+      <p>I tested the boundary aware Loop subdivision on the open beetle mesh. I applied multiple subdivision steps and checked that the wheel arches, window openings, and other open boundaries remained intact.</p>
+      <p>The mesh refined successfully without introducing visible holes, disconnected components, or broken boundary loops.</p>
+
+      <h3>Visual Verification</h3>
+      <p>I applied boundary aware Loop subdivision to the open beetle mesh for two consecutive rounds. After each round, the mesh became denser and smoother while the wheel arches, window openings, and other open boundaries remained connected. I did not observe any tearing, unintended closure of the boundary loops, or disconnected geometry.</p>
       <div class="figures">
         <figure>
           <img src="assets/ec2-open-round1.png" alt="Open beetle mesh after one boundary aware Loop subdivision step">
@@ -222,7 +365,34 @@
 
     <section id="ec3" aria-labelledby="ec3-heading">
       <h2 id="ec3-heading">Extra Credit 3: sqrt(3) Subdivision</h2>
-      <!-- REPORT CONTENT TO BE INSERTED IN LATER MILESTONE -->
+      <h3>Implementation</h3>
+      <p>I implemented sqrt(3) subdivision in <code>MeshResampler::upsampleSqrt3</code>.</p>
+      <p>For each original triangle, I insert a new vertex at the face centroid. I then reconnect the mesh so that each original triangle is divided into three smaller triangles.</p>
+      <p>The original vertices are repositioned using a valence dependent smoothing weight. For a vertex of degree n, I use</p>
+      <p>\[
+\alpha_n =
+\frac{
+4 - 2\cos\left(\frac{2\pi}{n}\right)
+}{9}
+\]</p>
+      <p>and update the original vertex position using</p>
+      <p>\[
+p&#x27;
+=
+(1-\alpha_n)p
++
+\frac{\alpha_n}{n}
+\sum_{i=1}^{n} p_i
+\]</p>
+      <p>where p is the original vertex position and the p_i values are the positions of its neighboring vertices.</p>
+      <p>The implementation is restricted to closed triangular meshes. Open meshes and non triangular inputs are left unchanged.</p>
+
+      <h3>Verification</h3>
+      <p>I tested sqrt(3) subdivision on several closed triangular meshes and across a range of vertex valences. Repeated subdivision increased the triangle density while preserving valid connectivity.</p>
+      <p>I also compared the resulting topology and smoothing behavior against Loop subdivision on the same cube input.</p>
+
+      <h3>Visual Verification</h3>
+      <p>I applied sqrt(3) subdivision to the cube for multiple rounds. After the first round, each original triangle was replaced by a denser centroid based triangulation. After three rounds, the surface became much smoother and more rounded while remaining connected. I did not observe any holes, disconnected faces, or other visible topology errors.</p>
       <div class="figures">
         <figure>
           <img src="assets/ec3-sqrt3-round1.png" alt="Cube after one sqrt(3) subdivision step">
@@ -237,7 +407,10 @@
 
     <section id="reflection" aria-labelledby="reflection-heading">
       <h2 id="reflection-heading">Reflection</h2>
-      <!-- REPORT CONTENT TO BE INSERTED IN LATER MILESTONE -->
+      <p>The most challenging part of this assignment was working with halfedge connectivity. Edge flips and edge splits are local operations, but they require every affected pointer to be updated consistently. A small mistake can leave the mesh looking reasonable while still corrupting the underlying topology.</p>
+      <p>Loop subdivision made the relationship between topology and geometry especially clear. The cube experiments showed that subdivision does not depend only on vertex positions. The initial connectivity and local sampling density can significantly affect the final shape.</p>
+      <p>The extra credit boundary work also made the distinction between interior and boundary rules much more concrete. Boundary meshes need different vertex update rules and different handling of edge operations in order to remain valid.</p>
+      <p>Overall, the assignment helped connect the mathematical definitions of curves and subdivision with the practical details required to maintain and modify a halfedge mesh implementation.</p>
     </section>
   </main>
 </body>
